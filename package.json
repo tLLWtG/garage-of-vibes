@@ -1,0 +1,26 @@
+{
+  "name": "seed-the-dungeon",
+  "description": "明明只是种田，为什么会长出魔王城啊？ Farm-to-dungeon roguelike prototype: the field you plant IS the dungeon you crawl.",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "framer-motion": "^12.40.0",
+    "immer": "^11.1.8",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16"
+  }
+}
