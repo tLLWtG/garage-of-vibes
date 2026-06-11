@@ -6,6 +6,7 @@ A small collection of browser games and interactive experiments.
 
 | Project | Branch | Description | Stack |
 | --- | --- | --- | --- |
+| **NOCTURNE · 夜曲画廊** | [`nocturne-gallery`](https://github.com/tLLWtG/garage-of-vibes/tree/nocturne-gallery) | A blog as a walkable night museum — posts hang as framed artworks along a dark mirrored corridor. | Three.js · TypeScript · Vite |
 | **Seed the Dungeon**<br/>明明只是种田，为什么会长出魔王城啊？ | [`seed-the-dungeon`](https://github.com/tLLWtG/garage-of-vibes/tree/seed-the-dungeon) | Plant a field by day, then explore what it turns into underground. | React · TypeScript · Vite · Zustand · Web Audio |
 
 ## Run
