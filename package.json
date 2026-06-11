@@ -1,0 +1,30 @@
+{
+  "name": "nocturne-gallery",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "NOCTURNE 夜曲画廊 — 一座可以漫步的 3D 博客美术馆",
+  "license": "MIT",
+  "author": "tLLWtG",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tLLWtG/garage-of-vibes.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.2.11",
+    "@fontsource/noto-serif-sc": "^5.2.8",
+    "marked": "^18.0.5",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.170.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16"
+  }
+}
