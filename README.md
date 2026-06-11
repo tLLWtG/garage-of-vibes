@@ -7,17 +7,20 @@
   <img alt="license" src="https://img.shields.io/badge/License-MIT-green" />
 </p>
 
-**NOCTURNE** 是一座开在浏览器里的夜间美术馆，也是一个博客。
+**NOCTURNE** 是一座开在浏览器里的夜间美术馆。
 
 文章不再是列表里的一行标题，而是装进画框、挂在深色长廊两侧的展品：
 滚轮往前走，射灯一盏一盏亮在头顶，镜面地板映出灯光的倒影；
-走到喜欢的那幅前面点一下，画面推近，文字才在黑暗里展开。
+走到喜欢的那幅前面点一下，画面推近，文字将在眼前展开。
 
-![长廊](docs/screenshot-corridor.png)
+<p align="center">
+  <img src="docs/screenshot-corridor.png" alt="夜曲画廊长廊" width="80%" />
+</p>
 
-| 聚焦一幅画 | 阅读层 | 馆藏检索 |
+| 聚焦画作 | 阅读文章 | 馆藏检索 |
 | :-: | :-: | :-: |
-| ![聚焦](docs/screenshot-focus.png) | ![阅读](docs/screenshot-reading.png) | ![检索](docs/screenshot-search.png) |
+| ![聚焦画作](docs/screenshot-focus.png) | ![阅读文章](docs/screenshot-reading.png) | ![馆藏检索](docs/screenshot-search.png) |
+
 
 ## 快速开始
 
@@ -31,6 +34,8 @@ npm run preview  # 预览构建产物
 纯前端项目，没有后端、没有数据库，构建产物可以部署到任何静态托管。
 
 ## 操作方式
+
+建议使用浏览器全屏浏览（`F11`）。
 
 | 操作 | 效果 |
 | --- | --- |
@@ -49,13 +54,14 @@ npm run preview  # 预览构建产物
 title: 文章标题
 date: 2026-06-01
 summary: 一句话摘要，会出现在阅读页的标题下方。
-variant: contours   # 可选：contours | grain | geo，省略则按种子随机
+variant: contours
 ---
 
 正文支持完整的 Markdown 语法……
 ```
 
 - 文章按 `date` 从新到旧排列，最新一篇挂在长廊入口。
+- `variant` 可选：`contours` / `grain` / `geo`；省略则按 slug 种子随机。
 - 封面是按 slug 种子生成的单色画作（等高线 / 颗粒辉光 / 极简几何），
   同一篇文章永远得到同一幅画，无需准备任何图片。
 - 展签（编号、标题、日期、阅读时长）也会自动生成。
@@ -101,9 +107,11 @@ src/
   style.css           全部界面样式（墨黑 × 暖象牙体系）
 ```
 
-## 性能预算
+## 兼容性与性能
 
-- 反射纹理 1024，画作射灯不开实时阴影，浮尘粒子按文章数量封顶。
+项目依赖 WebGL 渲染，建议使用较新的 Chrome、Edge、Firefox 或 Safari。低性能设备会自动限制像素比，但镜面反射和 Bloom 仍然比普通博客页面更吃 GPU。
+
+- 镜面地板的反射纹理固定为 1024 x 1024；画作射灯不启用实时阴影；浮尘粒子随文章数量增加，但有数量上限。
 - 后期管线：MSAA 渲染目标 + 三级降采样模糊的 SoftBloom + OutputPass。
 
 ## License
