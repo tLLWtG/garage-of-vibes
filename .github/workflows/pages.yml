@@ -1,0 +1,83 @@
+name: Deploy project gallery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare site directory
+        run: |
+          mkdir -p site/nocturne-gallery site/seed-the-dungeon
+          touch site/.nojekyll
+
+      - name: Checkout NOCTURNE gallery
+        uses: actions/checkout@v4
+        with:
+          ref: nocturne-gallery
+          path: projects/nocturne-gallery
+
+      - name: Build NOCTURNE gallery
+        working-directory: projects/nocturne-gallery
+        run: |
+          npm ci
+          npm run build -- --base=./
+          cp -R dist/. ../../site/nocturne-gallery/
+
+      - name: Checkout Seed the Dungeon
+        uses: actions/checkout@v4
+        with:
+          ref: seed-the-dungeon
+          path: projects/seed-the-dungeon
+
+      - name: Build Seed the Dungeon
+        working-directory: projects/seed-the-dungeon
+        run: |
+          npm ci
+          npm run build -- --base=./
+          cp -R dist/. ../../site/seed-the-dungeon/
+
+      - name: Checkout project index
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: project-index
+
+      - name: Copy project index
+        run: cp project-index/pages/index.html site/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
