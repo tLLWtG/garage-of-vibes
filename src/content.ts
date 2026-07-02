@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { parseFrontmatter, normalizeDate, formatDate } from './postMeta';
 
 export interface Post {
   slug: string;
@@ -22,23 +23,6 @@ const files = import.meta.glob('../content/posts/*.md', {
   eager: true,
 }) as Record<string, string>;
 
-function parseFrontmatter(src: string): { data: Record<string, string>; body: string } {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(src);
-  if (!match) return { data: {}, body: src };
-  const data: Record<string, string> = {};
-  for (const line of match[1].split(/\r?\n/)) {
-    const sep = line.indexOf(':');
-    if (sep < 0) continue;
-    const key = line.slice(0, sep).trim();
-    const value = line
-      .slice(sep + 1)
-      .trim()
-      .replace(/^["']|["']$/g, '');
-    if (key) data[key] = value;
-  }
-  return { data, body: src.slice(match[0].length) };
-}
-
 function estimateMinutes(body: string): number {
   const text = body.replace(/```[\s\S]*?```/g, ' ').replace(/[#>*`\-[\]()!]/g, '');
   const cjk = (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
@@ -60,23 +44,18 @@ function toPlain(body: string): string {
     .trim();
 }
 
-function formatDate(date: string): string {
-  const [y, m, d] = date.split('-').map((v) => parseInt(v, 10));
-  if (!y || !m || !d) return date;
-  return `${y} 年 ${m} 月 ${d} 日`;
-}
-
 /** 读取全部文章，按日期从新到旧排序（入口处是最新一篇）。 */
 export function loadPosts(): Post[] {
   const posts: Post[] = Object.entries(files).map(([path, src]) => {
     const slug = path.split('/').pop()!.replace(/\.md$/, '');
     const { data, body } = parseFrontmatter(src);
+    const date = normalizeDate(data.date ?? '1970-01-01');
     return {
       slug,
       index: 0,
       title: data.title ?? slug,
-      date: data.date ?? '1970-01-01',
-      dateLabel: formatDate(data.date ?? ''),
+      date,
+      dateLabel: formatDate(date),
       summary: data.summary ?? '',
       variant: data.variant ?? '',
       html: marked.parse(body, { async: false }) as string,

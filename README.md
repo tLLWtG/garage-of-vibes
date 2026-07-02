@@ -33,6 +33,10 @@ npm run preview  # 预览构建产物
 
 纯前端项目，没有后端、没有数据库，构建产物可以部署到任何静态托管。
 
+构建时会一并生成文字版归档 `archive.html`、RSS 订阅 `feed.xml` 与 `sitemap.xml`，
+供搜索引擎、RSS 读者与无 JavaScript 环境使用；
+部署前把 `vite.config.ts` 顶部的 `SITE_URL` 改成你的站点地址即可。
+
 ## 操作方式
 
 建议使用浏览器全屏浏览（`F11`）。
@@ -44,6 +48,9 @@ npm run preview  # 预览构建产物
 | 点击画作 / `Enter` | 推近聚焦并打开文章 |
 | `/` 或 `Ctrl+K` / 右上「检索」 | 打开馆藏检索，`↑` `↓` 选择、`Enter` 前往 |
 | `ESC` / 关闭按钮 / 点击背景 | 退出阅读，返回长廊 |
+
+- 每篇文章都有形如 `#/p/文章文件名` 的深链接，可直接分享；浏览器前进 / 后退能在文章间穿梭。
+- 画廊会记住你上次走到的位置，重访时从原地继续。
 
 ## 写一篇新文章
 
@@ -91,6 +98,7 @@ variant: contours
 content/posts/        文章（Markdown + frontmatter）
 src/
   content.ts          文章加载、frontmatter / Markdown 解析与检索索引
+  postMeta.ts         frontmatter / 日期解析（浏览器与构建插件共用）
   covers.ts           生成式封面与展签纹理（离屏 Canvas）
   gallery/
     scene.ts          渲染器、相机、环境光、后期合成管线
@@ -109,7 +117,7 @@ src/
 
 ## 兼容性与性能
 
-项目依赖 WebGL 渲染，建议使用较新的 Chrome、Edge、Firefox 或 Safari。低性能设备会自动限制像素比，但镜面反射和 Bloom 仍然比普通博客页面更吃 GPU。
+项目依赖 WebGL 渲染，建议使用较新的 Chrome、Edge、Firefox 或 Safari。渲染像素比钳制在 2 以内，但镜面反射和 Bloom 仍然比普通博客页面更吃 GPU。
 
 - 镜面地板的反射纹理固定为 1024 x 1024；画作射灯不启用实时阴影；浮尘粒子随文章数量增加，但有数量上限。
 - 后期管线：MSAA 渲染目标 + 三级降采样模糊的 SoftBloom + OutputPass。

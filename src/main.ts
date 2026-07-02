@@ -1,7 +1,9 @@
 import './style.css';
-import '@fontsource/cormorant-garamond/400.css';
-import '@fontsource/cormorant-garamond/500.css';
-import '@fontsource/cormorant-garamond/600.css';
+// Cormorant 只用于 ASCII 的品牌字与编号，引 latin 子集即可；
+// Noto Serif SC 必须保留全量 unicode-range 分片（正文任意汉字按需下载）
+import '@fontsource/cormorant-garamond/latin-400.css';
+import '@fontsource/cormorant-garamond/latin-500.css';
+import '@fontsource/cormorant-garamond/latin-600.css';
 import '@fontsource/noto-serif-sc/500.css';
 import '@fontsource/noto-serif-sc/700.css';
 
@@ -18,6 +20,26 @@ import { Overlay } from './ui/overlay';
 import { SearchOverlay } from './ui/search';
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+const DEFAULT_TITLE = document.title;
+const PROGRESS_KEY = 'nocturne:scroll';
+
+/** 从 location.hash 解析深链接的文章 slug（#/p/<slug>） */
+function slugFromHash(): string | null {
+  const m = /^#\/p\/(.+)$/.exec(location.hash);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+/** 写入 / 清除深链接 hash（幂等；清除用 pushState 避免残留孤立的 #） */
+function setHash(slug: string | null) {
+  if (slug === slugFromHash()) return;
+  if (slug) location.hash = `#/p/${encodeURIComponent(slug)}`;
+  else history.pushState(null, '', location.pathname + location.search);
+}
+
+function setTitle(post: Post | null) {
+  document.title = post ? `${post.title} · ${DEFAULT_TITLE}` : DEFAULT_TITLE;
+}
 
 async function loadFonts(posts: Post[]) {
   const zhSample = posts.map((p) => p.title).join('') + '夜曲画廊年月日约分钟正在经过阅读关闭';
@@ -56,22 +78,45 @@ async function boot() {
   loader.set(0.96, '点亮射灯…');
 
   // ------------------------------------------------------------ UI 与交互
+  /** 当前正在（前往）阅读的文章 slug，深链接 hash 以它为准 */
+  let readingSlug: string | null = null;
+
   const hud = new Hud(posts.length, () => search.open());
 
-  const overlay = new Overlay({
-    onClosed: () => {
-      hud.setReading(false);
-      rig.blur();
-    },
-    onNavigate: (post) => {
-      const entry = artworks[post.index];
+  /** 前往某篇文章：聚焦画作、写入深链接；阅读中则交叉换文 */
+  function goTo(post: Post) {
+    const entry = artworks[post.index];
+    if (!entry) return;
+    readingSlug = post.slug;
+    setHash(post.slug);
+    setTitle(post);
+    if (overlay.isOpen) {
       rig.focus(entry);
       overlay.open(post, posts[post.index - 1] ?? null, posts[post.index + 1] ?? null);
-    },
+    } else {
+      hud.setReading(true);
+      rig.focus(entry); // 文章由 onFocusArrived 打开
+    }
+  }
+
+  /** 退出阅读态的公共收尾（清深链接、还原标题、相机返程） */
+  function exitReading() {
+    readingSlug = null;
+    setHash(null);
+    setTitle(null);
+    hud.setReading(false);
+    rig.blur();
+  }
+
+  const overlay = new Overlay({
+    onClosed: () => exitReading(),
+    onNavigate: (post) => goTo(post),
   });
 
   const rig = new CameraRig(stage.camera, stage.renderer.domElement, {
     maxScroll: corridor.maxScroll,
+    count: posts.length,
+    introLook: artworks[0]?.center,
     onWake: () => hud.dismissHint(),
     onFocusArrived: (entry) => {
       if (overlay.isOpen) return;
@@ -85,18 +130,7 @@ async function boot() {
     onOpenChange: (open) => {
       rig.inputEnabled = !open;
     },
-    onSelect: (post) => {
-      const entry = artworks[post.index];
-      if (!entry) return;
-      if (overlay.isOpen) {
-        // 阅读中检索：滑向新画作并交叉换文
-        rig.focus(entry);
-        overlay.open(post, posts[post.index - 1] ?? null, posts[post.index + 1] ?? null);
-      } else {
-        hud.setReading(true);
-        rig.focus(entry);
-      }
-    },
+    onSelect: (post) => goTo(post),
   });
 
   const picker = new Picker(stage.camera, stage.renderer.domElement, artworks, {
@@ -104,8 +138,7 @@ async function boot() {
     onHover: (entry) => hud.setHover(entry !== null),
     onPick: (entry) => {
       hud.setHover(false);
-      hud.setReading(true);
-      rig.focus(entry);
+      goTo(entry.post);
     },
   });
 
@@ -122,20 +155,59 @@ async function boot() {
     }
     if (e.key === 'Escape') {
       if (search.isOpen) search.close();
-      else if (overlay.isOpen) overlay.close();
-      else if (rig.mode === 'focus') {
-        hud.setReading(false);
-        rig.blur();
-      }
+      else if (overlay.isOpen) overlay.close(); // onClosed 里统一收尾
+      else if (rig.mode === 'focus') exitReading();
     }
     if (e.key === 'Enter' && rig.mode === 'roam' && !overlay.isOpen && !search.isOpen) {
       const entry = artworks[rig.nearestIndex];
-      if (entry) {
-        hud.setReading(true);
-        rig.focus(entry);
-      }
+      if (entry) goTo(entry.post);
     }
   });
+
+  // ------------------------------------------------------------ 深链接与进度
+  // 浏览器前进 / 后退：hash 有 slug 则前往，变空则退出阅读
+  window.addEventListener('hashchange', () => {
+    const slug = slugFromHash();
+    if (slug) {
+      if (slug === readingSlug) return;
+      const post = posts.find((p) => p.slug === slug);
+      if (post) goTo(post);
+    } else if (readingSlug) {
+      if (overlay.isOpen) overlay.close();
+      else exitReading();
+    }
+  });
+
+  // 离开时记住走到哪，重访从原地继续
+  const saveProgress = () => {
+    try {
+      localStorage.setItem(PROGRESS_KEY, String(rig.scrollValue));
+    } catch {
+      /* 隐私模式下 localStorage 不可用，安静跳过 */
+    }
+  };
+  window.addEventListener('pagehide', saveProgress);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveProgress();
+  });
+
+  const initialPost = (() => {
+    const slug = slugFromHash();
+    return slug ? posts.find((p) => p.slug === slug) : undefined;
+  })();
+  if (initialPost) {
+    // 深链接进馆：定位到画作稍后方，再走完整的聚焦动画
+    rig.restore(-artworks[initialPost.index].z);
+    goTo(initialPost);
+  } else {
+    let saved = NaN;
+    try {
+      saved = parseFloat(localStorage.getItem(PROGRESS_KEY) ?? '');
+    } catch {
+      /* ignore */
+    }
+    if (Number.isFinite(saved) && saved > 0.5) rig.restore(saved);
+  }
 
   // ------------------------------------------------------------ 渲染循环
   const clock = new THREE.Clock();

@@ -21,7 +21,7 @@ const WARM = 0xffe8cd;
 
 export function buildCorridor(scene: THREE.Scene, count: number): Corridor {
   const { width, height, spacing, firstOffset, startPad, endPad } = CORRIDOR;
-  const maxScroll = firstOffset + Math.max(1, count - 1) * spacing;
+  const maxScroll = firstOffset + Math.max(0, count - 1) * spacing;
   const zStart = startPad;
   const zEnd = -(maxScroll + endPad);
   const length = zStart - zEnd;

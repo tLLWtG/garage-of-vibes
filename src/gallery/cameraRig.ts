@@ -6,6 +6,10 @@ export type RigMode = 'intro' | 'roam' | 'focus';
 
 export interface RigOptions {
   maxScroll: number;
+  /** 画作总数（不要从 maxScroll 反推：单篇时会推错） */
+  count: number;
+  /** 开场瞥视的落点（第一幅画的中心）；省略则直接看向走廊中线 */
+  introLook?: THREE.Vector3;
   onFocusArrived(entry: ArtworkEntry): void;
   onWake?(): void;
 }
@@ -46,6 +50,7 @@ export class CameraRig {
   private focusFired = false;
 
   private introTimer = 0;
+  private glance = true;
   private reducedMotion = false;
 
   // 阻尼系数本身也做平滑：blur() 把它压低，update 中渐渐恢复，返程才不会瞬间全速甩动
@@ -112,29 +117,29 @@ export class CameraRig {
   }
 
   private onKey(e: KeyboardEvent, down: boolean) {
-    if (!this.inputEnabled) return;
     const code = e.code;
-    if (down) {
-      if (this.mode === 'focus') return;
-      if (code === 'PageDown') {
-        this.snapBy(1);
-        return;
-      }
-      if (code === 'PageUp') {
-        this.snapBy(-1);
-        return;
-      }
-      this.keys.add(code);
-    } else {
+    // 松键永远生效：检索打开（inputEnabled=false）期间松开的键不能残留在 keys 里
+    if (!down) {
       this.keys.delete(code);
+      return;
     }
+    if (!this.inputEnabled || this.mode === 'focus') return;
+    if (code === 'PageDown') {
+      this.snapBy(1);
+      return;
+    }
+    if (code === 'PageUp') {
+      this.snapBy(-1);
+      return;
+    }
+    this.keys.add(code);
   }
 
   private snapBy(step: number) {
     this.wake();
     // 基于“目标位置”而非当前阻尼位置推算，连按时才能逐张累进
     const targetIdx = Math.round((this.scrollTarget - CORRIDOR.firstOffset) / CORRIDOR.spacing);
-    const idx = clamp(targetIdx + step, 0, this.count - 1);
+    const idx = clamp(targetIdx + step, 0, this.opts.count - 1);
     this.scrollTarget = CORRIDOR.firstOffset + idx * CORRIDOR.spacing;
   }
 
@@ -144,16 +149,17 @@ export class CameraRig {
     return this.opts.maxScroll > 0 ? this.scroll / this.opts.maxScroll : 0;
   }
 
+  /** 当前沿长廊走过的距离（米），供进度记忆持久化 */
+  get scrollValue(): number {
+    return this.scroll;
+  }
+
   get nearestIndex(): number {
     return clamp(
       Math.round((this.scroll - CORRIDOR.firstOffset) / CORRIDOR.spacing),
       0,
-      this.count - 1,
+      this.opts.count - 1,
     );
-  }
-
-  private get count(): number {
-    return Math.round((this.opts.maxScroll - CORRIDOR.firstOffset) / CORRIDOR.spacing) + 1;
   }
 
   focus(entry: ArtworkEntry) {
@@ -171,6 +177,17 @@ export class CameraRig {
     // 聚焦手感保持原样：直接以聚焦阻尼起步
     this.posLambdaCur = 3.2;
     this.lookLambdaCur = 3.6;
+  }
+
+  /** 恢复上次离开时的位置：从恢复点后方轻推入场，跳过开场瞥视 */
+  restore(scroll: number) {
+    const s = clamp(scroll, 0, this.opts.maxScroll);
+    this.glance = false;
+    this.scroll = this.scrollTarget = s;
+    this.pos.set(0, EYE + 0.04, -s + 2.2);
+    this.look.set(0, EYE - 0.05, -s - 7);
+    this.camera.position.copy(this.pos);
+    this.camera.lookAt(this.look);
   }
 
   blur() {
@@ -220,7 +237,13 @@ export class CameraRig {
 
     if (this.mode === 'intro') {
       this.introTimer += dt;
-      if (this.introTimer > 3.2) this.mode = 'roam';
+      // 开场先把视线落在入口第一幅画上，再缓缓归正走廊中线。
+      // 窗口刻意压后：渲染循环在加载屏后面就已启动，瞥视要等揭幕后才被看见
+      if (this.glance && this.opts.introLook && !this.reducedMotion) {
+        const w = 1 - THREE.MathUtils.smoothstep(this.introTimer, 2.3, 3.9);
+        if (w > 0) this.desiredLook.lerp(this.opts.introLook, w);
+      }
+      if (this.introTimer > 4.2) this.mode = 'roam';
     }
 
     const posLambda = this.mode === 'intro' ? 1.5 : this.mode === 'focus' ? 3.2 : 5.5;
