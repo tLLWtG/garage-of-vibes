@@ -13,6 +13,9 @@ export interface ArtworkEntry {
   normal: THREE.Vector3;
   size: { w: number; h: number };
   z: number;
+  /** 这幅画的射灯与画面材质，供悬停增亮 */
+  spot: THREE.SpotLight;
+  coverMat: THREE.MeshStandardMaterial;
 }
 
 // 共享材质
@@ -130,17 +133,15 @@ export function buildArtwork(post: Post, scene: THREE.Scene, anisotropy: number)
 
   const coverTex = makeCoverTexture(post.slug, post.variant);
   coverTex.anisotropy = anisotropy;
-  const cover = new THREE.Mesh(
-    new THREE.PlaneGeometry(w * 0.78, h * 0.78),
-    new THREE.MeshStandardMaterial({
-      map: coverTex,
-      emissive: 0xffffff,
-      emissiveMap: coverTex,
-      emissiveIntensity: 0.34,
-      roughness: 0.86,
-      metalness: 0,
-    }),
-  );
+  const coverMat = new THREE.MeshStandardMaterial({
+    map: coverTex,
+    emissive: 0xffffff,
+    emissiveMap: coverTex,
+    emissiveIntensity: 0.34,
+    roughness: 0.86,
+    metalness: 0,
+  });
+  const cover = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.78, h * 0.78), coverMat);
   cover.position.set(0, cy, 0.078);
   group.add(cover);
 
@@ -237,6 +238,8 @@ export function buildArtwork(post: Post, scene: THREE.Scene, anisotropy: number)
     normal,
     size: { w, h },
     z,
+    spot,
+    coverMat,
   };
   hitMesh.userData.entry = entry;
   return entry;

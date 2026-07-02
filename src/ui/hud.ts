@@ -19,7 +19,7 @@ export class Hud {
   private hintDismissed = false;
   private finePointer = matchMedia('(pointer: fine)').matches;
 
-  constructor(total: number, onSearch: () => void) {
+  constructor(total: number, onSearch: () => void, onSeek?: (t: number) => void) {
     this.root = document.createElement('div');
     this.root.className = 'hud';
     this.root.innerHTML = `
@@ -61,6 +61,18 @@ export class Hud {
     (this.root.querySelector('.hud-search') as HTMLElement).addEventListener('click', () =>
       onSearch(),
     );
+
+    // 进度线即长廊地图：点在哪里，就滑到长廊的哪一段
+    if (onSeek) {
+      const track = this.root.querySelector('.hud-progress') as HTMLElement;
+      track.classList.add('is-seekable');
+      track.setAttribute('role', 'slider');
+      track.setAttribute('aria-label', '长廊位置');
+      track.addEventListener('click', (e) => {
+        onSeek(e.clientX / window.innerWidth);
+        this.dismissHint();
+      });
+    }
 
     if (this.finePointer) {
       this.dot = document.createElement('div');

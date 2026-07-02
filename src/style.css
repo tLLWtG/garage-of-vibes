@@ -236,6 +236,10 @@ body::after {
   pointer-events: none;
 }
 
+.hud.is-reading .hud-progress {
+  pointer-events: none;
+}
+
 .hud-bottom {
   position: absolute;
   left: 0;
@@ -320,11 +324,35 @@ body::after {
   background: var(--line-soft);
 }
 
+/* 可点击的进度线：把命中区悄悄扩大到 18px 高，悬停时线亮起 */
+.hud-progress.is-seekable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hud-progress.is-seekable::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18px;
+}
+
+.hud-progress.is-seekable:hover {
+  background: rgba(232, 226, 212, 0.22);
+}
+
 .hud-progress-bar {
   height: 100%;
   background: linear-gradient(90deg, rgba(232, 226, 212, 0.55), var(--ivory));
   transform-origin: left;
   transform: scaleX(0);
+  transition: background 0.3s;
+}
+
+.hud-progress.is-seekable:hover .hud-progress-bar {
+  background: var(--ivory);
 }
 
 @keyframes hud-in {
@@ -415,6 +443,30 @@ html.is-searching .cursor-ring {
 .overlay.is-open .overlay-backdrop {
   opacity: 1;
   transition: opacity 0.55s ease;
+}
+
+/* 阅读进度：贴在阅读层顶部的一根细线，随正文滚动生长 */
+.overlay-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 2;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.5s ease 0.3s;
+}
+
+.overlay.is-open .overlay-progress {
+  opacity: 1;
+}
+
+.overlay-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(232, 226, 212, 0.4), rgba(232, 226, 212, 0.85));
+  transform-origin: left;
+  transform: scaleX(0);
 }
 
 .overlay-scroll {
@@ -528,6 +580,31 @@ html.is-searching .cursor-ring {
   background: var(--line);
 }
 
+/* 复制深链接：kicker 行末的安静小字 */
+.post-share {
+  margin-left: auto;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 2px 1px 5px;
+  color: var(--ivory-faint);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s;
+}
+
+.post-share:hover {
+  color: var(--ivory);
+  border-color: rgba(232, 226, 212, 0.45);
+}
+
+.post-share.is-done {
+  color: var(--ivory);
+  border-color: transparent;
+}
+
 .post-title {
   font-family: var(--serif-zh);
   font-weight: 700;
@@ -633,6 +710,43 @@ html.is-searching .cursor-ring {
   padding: 0.12em 0.42em;
 }
 
+.code-block {
+  position: relative;
+  margin: 0 0 2em;
+}
+
+.code-block .code-copy {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(7, 7, 9, 0.6);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  padding: 4px 10px;
+  color: var(--ivory-faint);
+  font-family: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.25s, color 0.25s, border-color 0.25s;
+}
+
+.code-block:hover .code-copy,
+.code-block .code-copy:focus-visible,
+.code-block .code-copy.is-done {
+  opacity: 1;
+}
+
+.code-block .code-copy:hover {
+  color: var(--ivory);
+  border-color: rgba(232, 226, 212, 0.4);
+}
+
+.code-block .code-copy.is-done {
+  color: var(--ivory);
+}
+
 .post-body pre {
   background: #101014;
   border: 1px solid var(--line-soft);
@@ -641,6 +755,10 @@ html.is-searching .cursor-ring {
   overflow-x: auto;
   margin: 0 0 2em;
   scrollbar-width: thin;
+}
+
+.code-block pre {
+  margin: 0;
 }
 
 .post-body pre code {

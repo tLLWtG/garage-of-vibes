@@ -132,6 +132,11 @@ export class CameraRig {
       this.snapBy(-1);
       return;
     }
+    if (code === 'Home' || code === 'End') {
+      this.wake();
+      this.scrollTarget = code === 'Home' ? 0 : this.opts.maxScroll;
+      return;
+    }
     this.keys.add(code);
   }
 
@@ -152,6 +157,13 @@ export class CameraRig {
   /** 当前沿长廊走过的距离（米），供进度记忆持久化 */
   get scrollValue(): number {
     return this.scroll;
+  }
+
+  /** 平滑滑向长廊的某个进度位置（0..1），供进度线点击跳转 */
+  seekTo(t: number) {
+    if (!this.inputEnabled || this.mode === 'focus') return;
+    this.wake();
+    this.scrollTarget = clamp(t, 0, 1) * this.opts.maxScroll;
   }
 
   get nearestIndex(): number {

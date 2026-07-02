@@ -162,6 +162,13 @@ function nocturneStatic(): Plugin {
         res.end(page.render(loadStaticPosts(root)));
       });
     },
+    // og:url 只有构建时才知道最终部署地址，静态模板里不硬编码
+    transformIndexHtml(html) {
+      return html.replace(
+        '<meta property="og:type"',
+        `<meta property="og:url" content="${SITE_URL}" />\n    <meta property="og:type"`,
+      );
+    },
     generateBundle() {
       const posts = loadStaticPosts(root);
       for (const [url, page] of Object.entries(pages)) {

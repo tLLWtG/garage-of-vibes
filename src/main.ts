@@ -81,7 +81,11 @@ async function boot() {
   /** 当前正在（前往）阅读的文章 slug，深链接 hash 以它为准 */
   let readingSlug: string | null = null;
 
-  const hud = new Hud(posts.length, () => search.open());
+  const hud = new Hud(
+    posts.length,
+    () => search.open(),
+    (t) => rig.seekTo(t),
+  );
 
   /** 前往某篇文章：聚焦画作、写入深链接；阅读中则交叉换文 */
   function goTo(post: Post) {
@@ -133,10 +137,15 @@ async function boot() {
     onSelect: (post) => goTo(post),
   });
 
+  let hovered: ArtworkEntry | null = null;
   const picker = new Picker(stage.camera, stage.renderer.domElement, artworks, {
     isActive: () => rig.mode !== 'focus' && !overlay.isOpen && !search.isOpen,
-    onHover: (entry) => hud.setHover(entry !== null),
+    onHover: (entry) => {
+      hovered = entry;
+      hud.setHover(entry !== null);
+    },
     onPick: (entry) => {
+      hovered = null;
       hud.setHover(false);
       goTo(entry.post);
     },
@@ -172,6 +181,7 @@ async function boot() {
       if (slug === readingSlug) return;
       const post = posts.find((p) => p.slug === slug);
       if (post) goTo(post);
+      else setHash(null); // 指向不存在的文章：清掉，别让死链接躺在地址栏
     } else if (readingSlug) {
       if (overlay.isOpen) overlay.close();
       else exitReading();
@@ -199,6 +209,9 @@ async function boot() {
     // 深链接进馆：定位到画作稍后方，再走完整的聚焦动画
     rig.restore(-artworks[initialPost.index].z);
     goTo(initialPost);
+  } else if (slugFromHash()) {
+    // 深链接指向不存在的文章（已删除或拼错）：清掉，避免死链接残留在地址栏
+    setHash(null);
   } else {
     let saved = NaN;
     try {
@@ -211,11 +224,19 @@ async function boot() {
 
   // ------------------------------------------------------------ 渲染循环
   const clock = new THREE.Clock();
+  const dampNum = (x: number, y: number, l: number, dt: number) =>
+    x + (y - x) * (1 - Math.exp(-l * dt));
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.05);
     rig.update(dt);
     picker.update();
     corridor.update(clock.elapsedTime);
+    // 悬停的画作：射灯与画面轻轻抬亮，像被多看了一眼
+    for (const a of artworks) {
+      const lit = a === hovered;
+      a.spot.intensity = dampNum(a.spot.intensity, lit ? 38 : 30, 9, dt);
+      a.coverMat.emissiveIntensity = dampNum(a.coverMat.emissiveIntensity, lit ? 0.44 : 0.34, 9, dt);
+    }
     const idx = rig.nearestIndex;
     hud.update(dt, rig.progress, idx, posts[idx]?.title ?? '');
     stage.render();
